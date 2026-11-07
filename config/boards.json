@@ -1,0 +1,37 @@
+{
+  "_comment": "Company job boards to scan. 'token' is the slug in job-boards.greenhouse.io/<token> or jobs.ashbyhq.com/<token>. All tokens below were verified to exist on 2026-11-07. Check new ones with: node scripts/probe.js <token> ...",
+  "greenhouse": [
+    { "token": "drweng", "company": "DRW" },
+    { "token": "imc", "company": "IMC Trading" },
+    { "token": "jumptrading", "company": "Jump Trading" },
+    { "token": "optiverus", "company": "Optiver" },
+    { "token": "akunacapital", "company": "Akuna Capital" },
+    { "token": "wehrtyou", "company": "Hudson River Trading" },
+    { "token": "chicagotrading", "company": "Chicago Trading Company" },
+    { "token": "towerresearchcapital", "company": "Tower Research Capital" },
+    { "token": "aquaticcapitalmanagement", "company": "Aquatic Capital" },
+    { "token": "genevatrading", "company": "Geneva Trading" },
+    { "token": "gelbergroup", "company": "Gelber Group" },
+    { "token": "simplextrading", "company": "Simplex Trading" },
+    { "token": "flowtraders", "company": "Flow Traders" },
+    { "token": "virtu", "company": "Virtu Financial" },
+    { "token": "janestreet", "company": "Jane Street" },
+    { "token": "clearstreet", "company": "Clear Street" },
+    { "token": "tastytrade", "company": "tastytrade" },
+    { "token": "ninjatrader", "company": "NinjaTrader" },
+    { "token": "robinhood", "company": "Robinhood" },
+    { "token": "ripple", "company": "Ripple" },
+    { "token": "enova", "company": "Enova" },
+    { "token": "nasdaq", "company": "Nasdaq" }
+  ],
+  "ashby": [
+    { "token": "ninjatrader", "company": "NinjaTrader" },
+    { "token": "kalshi", "company": "Kalshi" },
+    { "token": "polymarket", "company": "Polymarket" },
+    { "token": "kraken.com", "company": "Kraken" },
+    { "token": "paxos", "company": "Paxos" },
+    { "token": "trm-labs", "company": "TRM Labs" },
+    { "token": "elliptic", "company": "Elliptic" },
+    { "token": "circle", "company": "Circle" }
+  ]
+}
