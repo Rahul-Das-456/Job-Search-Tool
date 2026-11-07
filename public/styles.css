@@ -80,3 +80,5 @@ mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1
 .queries { font-size: 12.5px; padding-left: 20px; margin: 6px 0 0; }
 .queries li { margin: 4px 0; word-break: break-word; }
 code { font-size: 12px; }
+[hidden] { display: none !important; }
+a.btn { text-decoration: none; display: inline-block; }

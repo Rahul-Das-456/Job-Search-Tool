@@ -44,6 +44,11 @@ jobs:
           GOOGLE_CSE_KEY: ${{ secrets.GOOGLE_CSE_KEY }}
           GOOGLE_CSE_CX: ${{ secrets.GOOGLE_CSE_CX }}
 
+      - name: Probe candidate boards (temporary)
+        if: github.ref != 'refs/heads/main'
+        continue-on-error: true
+        run: node scripts/probe.js
+
       - name: Check browser (CORS) access to the job APIs
         continue-on-error: true
         run: |

@@ -11,7 +11,8 @@ const state = {
   data: null,
   seen: new Set(store.get('seenIds', [])),
   activeCats: new Set(store.get('activeCats', [])),
-  filters: store.get('filters', { q: '', source: '', sort: 'score', titleOnly: false, newOnly: false }),
+  filters: { q: '', source: '', sort: 'score', titleOnly: false, newOnly: false, company: '', days: '', ...store.get('filters', {}) },
+  static: false,
 };
 
 const catLabel = (id) => state.config?.categories.find((c) => c.id === id)?.label || id;
@@ -37,11 +38,14 @@ function highlight(text, terms) {
 }
 
 function filtered() {
-  const { q, source, sort, titleOnly, newOnly } = state.filters;
+  const { q, source, sort, titleOnly, newOnly, company, days } = state.filters;
+  const cutoff = days ? Date.now() - Number(days) * 86400e3 : 0;
   const needle = q.trim().toLowerCase();
   let jobs = state.data?.jobs || [];
   jobs = jobs.filter((j) => {
     if (source && j.source !== source) return false;
+    if (company && j.company !== company) return false;
+    if (cutoff && new Date(j.publishedAt || j.updatedAt || j.firstSeen).getTime() < cutoff) return false;
     if (titleOnly && !j.titleHit) return false;
     if (newOnly && state.seen.has(j.id)) return false;
     if (state.activeCats.size && !j.categories.some((c) => state.activeCats.has(c))) return false;
@@ -71,7 +75,15 @@ function renderStats() {
     [companies, 'companies hiring'],
     [`${ok}/${d?.boards?.length || 0}`, 'boards scanned OK'],
   ].map(([n, l]) => `<div class="stat"><b>${n}</b><span>${l}</span></div>`).join('');
-  $('#scanned').textContent = d?.scannedAt ? `last scan ${timeAgo(d.scannedAt)}${d.mock ? ' (mock data)' : ''}` : 'not scanned yet';
+  const every = state.static ? ` · updates every ${state.config.refreshHours || 3} h` : '';
+  $('#scanned').textContent = d?.scannedAt ? `last scan ${timeAgo(d.scannedAt)}${d.mock ? ' (mock data)' : ''}${every}` : 'not scanned yet';
+  renderCompanies();
+}
+
+function renderCompanies() {
+  const sel = $('#company');
+  const names = [...new Set((state.data?.jobs || []).map((j) => j.company))].sort((a, b) => a.localeCompare(b));
+  sel.innerHTML = `<option value="">All companies</option>` + names.map((n) => `<option${n === state.filters.company ? ' selected' : ''}>${esc(n)}</option>`).join('');
 }
 
 function renderChips() {
@@ -116,7 +128,7 @@ function renderBoards() {
   $('#boards').innerHTML = boards.map((b) => `<div class="board">
       <div><b>${esc(b.company)}</b> <span class="muted">${b.source} · ${esc(b.token)}${b.origin !== 'seed' ? ` · ${b.origin}` : ''}</span>
         <small class="${b.ok ? 'ok' : 'err'}">${b.ok ? `${b.matched} match · ${b.chicago} Chicago · ${b.total} total` : esc(b.error)}</small></div>
-      ${b.origin === 'custom' ? `<button title="Remove" data-remove="${b.source}|${esc(b.token)}">✕</button>` : ''}
+      ${b.origin === 'custom' && !state.static ? `<button title="Remove" data-remove="${b.source}|${esc(b.token)}">✕</button>` : ''}
     </div>`).join('') || '<p class="hint">No boards yet.</p>';
 }
 
@@ -125,14 +137,16 @@ function renderQueries() {
   const g = (q) => `https://www.google.com/search?q=${encodeURIComponent(q)}`;
   $('#queries').innerHTML = [...greenhouse, ...ashby].map((q) => `<li><a href="${g(q)}" target="_blank" rel="noopener">${esc(q)}</a></li>`).join('');
   $('#discoveryHint').innerHTML = state.config.discoveryProvider
-    ? `Discovery is <b>on</b> (${esc(state.config.discoveryProvider)}): these queries run automatically every day to find new company boards.`
-    : 'Discovery is <b>off</b>. Set <code>SERPAPI_KEY</code>, <code>BRAVE_SEARCH_API_KEY</code> or <code>GOOGLE_CSE_KEY</code>+<code>GOOGLE_CSE_CX</code> to run these queries automatically and pick up new boards. Click any query to run it in Google manually.';
-  $('#discoverBtn').hidden = !state.config.discoveryProvider;
+    ? `Discovery is <b>on</b> (${esc(state.config.discoveryProvider)}): these queries run automatically to find new company boards.`
+    : state.static
+      ? 'Discovery is <b>off</b>. Add a <code>SERPAPI_KEY</code> (or <code>BRAVE_SEARCH_API_KEY</code>) repository secret to run these queries automatically and pick up new company boards. Click any query to run it in Google.'
+      : 'Discovery is <b>off</b>. Set <code>SERPAPI_KEY</code>, <code>BRAVE_SEARCH_API_KEY</code> or <code>GOOGLE_CSE_KEY</code>+<code>GOOGLE_CSE_CX</code> to run these queries automatically and pick up new boards. Click any query to run it in Google manually.';
+  $('#discoverBtn').hidden = state.static || !state.config.discoveryProvider;
 }
 
 function render() { renderStats(); renderChips(); renderResults(); renderBoards(); }
 
-async function load(url = '/api/jobs', opts) {
+async function load(url = state.static ? 'jobs.json' : 'api/jobs', opts) {
   const res = await fetch(url, opts);
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
   state.data = await res.json();
@@ -143,7 +157,7 @@ async function runScan(discover = false) {
   const btns = [$('#scanBtn'), $('#discoverBtn')];
   btns.forEach((b) => (b.disabled = true));
   $('#scanBtn').textContent = 'Scanning…';
-  try { await load(`/api/scan${discover ? '?discover=1' : ''}`, { method: 'POST' }); }
+  try { await load(`api/scan${discover ? '?discover=1' : ''}`, { method: 'POST' }); }
   catch (e) { alert(`Scan failed: ${e.message}`); }
   finally { btns.forEach((b) => (b.disabled = false)); $('#scanBtn').textContent = 'Scan now'; }
 }
@@ -178,6 +192,9 @@ function bind() {
   $('#sort').addEventListener('change', (e) => { f.sort = e.target.value; save(); });
   $('#titleOnly').addEventListener('change', (e) => { f.titleOnly = e.target.checked; save(); });
   $('#newOnly').addEventListener('change', (e) => { f.newOnly = e.target.checked; save(); });
+  $('#days').value = f.days;
+  $('#days').addEventListener('change', (e) => { f.days = e.target.value; save(); });
+  $('#company').addEventListener('change', (e) => { f.company = e.target.value; save(); });
 
   $('#chips').addEventListener('click', (e) => {
     const id = e.target.closest('.chip')?.dataset.cat;
@@ -204,7 +221,7 @@ function bind() {
     e.preventDefault();
     const fd = new FormData(e.target);
     const body = { ...parseBoardInput(fd.get('source'), fd.get('token')), company: fd.get('company') || undefined };
-    const res = await fetch('/api/boards', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    const res = await fetch('api/boards', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     if (!res.ok) return alert((await res.json()).error);
     e.target.reset();
     runScan(false);
@@ -213,13 +230,22 @@ function bind() {
     const v = e.target.closest('[data-remove]')?.dataset.remove;
     if (!v) return;
     const [source, token] = v.split('|');
-    await fetch('/api/boards', { method: 'DELETE', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ source, token }) });
+    await fetch('api/boards', { method: 'DELETE', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ source, token }) });
     runScan(false);
   });
 }
 
 async function init() {
-  state.config = await (await fetch('/api/config')).json();
+  // Server mode (npm start) has an API; the hosted static site ships config.json + jobs.json.
+  const api = await fetch('api/config').catch(() => null);
+  if (api?.ok && api.headers.get('content-type')?.includes('json')) {
+    state.config = await api.json();
+  } else {
+    state.static = true;
+    state.config = await (await fetch('config.json', { cache: 'no-cache' })).json();
+    for (const el of document.querySelectorAll('.server-only')) el.hidden = true;
+    for (const el of document.querySelectorAll('.static-only')) el.hidden = false;
+  }
   renderQueries();
   bind();
   await load().catch((e) => { $('#results').innerHTML = `<p class="empty">Failed to load: ${esc(e.message)}</p>`; });

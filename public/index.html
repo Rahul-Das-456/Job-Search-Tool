@@ -15,8 +15,9 @@
         <p class="sub">Greenhouse + Ashby boards · Chicago only · <span id="scanned">not scanned yet</span></p>
       </div>
       <div class="actions">
-        <button id="scanBtn" class="btn primary">Scan now</button>
-        <button id="discoverBtn" class="btn" hidden title="Run the site: queries through your search API to find new company boards, then scan">Discover + scan</button>
+        <a class="btn static-only" hidden href="feed.xml" title="RSS feed of new matches">RSS</a>
+        <button id="scanBtn" class="btn primary server-only">Scan now</button>
+        <button id="discoverBtn" class="btn server-only" hidden title="Run the site: queries through your search API to find new company boards, then scan">Discover + scan</button>
       </div>
     </div>
   </header>
@@ -30,6 +31,13 @@
         <option value="">All sources</option>
         <option value="greenhouse">Greenhouse</option>
         <option value="ashby">Ashby</option>
+      </select>
+      <select id="company" aria-label="Company"><option value="">All companies</option></select>
+      <select id="days" aria-label="Posted within">
+        <option value="">Any time</option>
+        <option value="1">Past 24 hours</option>
+        <option value="7">Past week</option>
+        <option value="30">Past month</option>
       </select>
       <select id="sort" aria-label="Sort">
         <option value="score">Best match</option>
@@ -52,7 +60,7 @@
           <div id="boards" class="boards"></div>
         </details>
 
-        <details>
+        <details class="server-only">
           <summary>Add a company board</summary>
           <form id="addBoard" class="add">
             <select name="source">
