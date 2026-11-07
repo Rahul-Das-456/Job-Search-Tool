@@ -25,9 +25,9 @@ export const CATEGORIES = [
   { id: 'derivatives', label: 'Derivatives / Options / Futures Compliance',
     terms: ['derivatives compliance', 'options compliance', 'futures surveillance'] },
   { id: 'fincrime', label: 'Financial Crime / Investigations',
-    terms: ['financial crime', 'transaction monitoring', 'trading investigations'] },
+    terms: ['financial crime', 'transaction monitoring', 'trading investigations', 'AML', 'anti-money laundering', 'KYC'] },
   { id: 'roles', label: 'Compliance / Surveillance Roles',
-    terms: ['compliance officer', 'compliance associate', 'surveillance analyst'] },
+    terms: ['compliance officer', 'compliance associate', 'surveillance analyst', 'compliance analyst', 'compliance manager', 'compliance specialist', 'compliance lead'] },
   { id: 'reg-reporting', label: 'Regulatory Reporting / Controls / Testing',
     terms: ['regulatory reporting', 'regulatory controls', 'compliance testing'] },
 ];

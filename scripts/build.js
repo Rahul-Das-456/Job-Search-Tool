@@ -63,16 +63,17 @@ async function main() {
   // Report: console + GitHub job summary.
   const ok = result.boards.filter((b) => b.ok);
   const bad = result.boards.filter((b) => !b.ok);
+  const strong = result.jobs.filter((j) => j.strong);
   const lines = [
-    `## Scan: ${result.jobs.length} matching Chicago jobs`,
+    `## Scan: ${strong.length} strong matches (${result.jobs.length} Chicago jobs mention a topic)`,
     `${ok.length}/${result.boards.length} boards OK · ${result.durationMs} ms · discovery: ${result.discovery?.provider || 'off'}${result.discovery?.found ? ` (${result.discovery.found} boards found)` : ''}`,
     '',
     '| Board | Source | Status | Total | Chicago | Matched |',
     '|---|---|---|---|---|---|',
     ...result.boards.map((b) => `| ${b.company} (\`${b.token}\`) | ${b.source} | ${b.ok ? 'OK' : `FAIL: ${b.error}`} | ${b.total ?? ''} | ${b.chicago ?? ''} | ${b.matched ?? ''} |`),
     '',
-    '### Jobs',
-    ...result.jobs.map((j) => `- [${j.score}] **${j.company}**: ${j.title} — ${j.location}`),
+    '### Strong matches',
+    ...strong.map((j) => `- [${j.score}] **${j.company}**: ${j.title} — ${j.location}`),
   ].join('\n');
   console.log(lines);
   if (process.env.GITHUB_STEP_SUMMARY) await fs.appendFile(process.env.GITHUB_STEP_SUMMARY, lines + '\n');
