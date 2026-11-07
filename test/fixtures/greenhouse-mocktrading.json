@@ -1,0 +1,34 @@
+{
+  "jobs": [
+    {
+      "id": 1001, "title": "Trade Surveillance Analyst", "updated_at": "2026-11-02T14:00:00-05:00", "first_published": "2026-10-30T10:00:00-05:00",
+      "location": { "name": "Chicago, IL" }, "absolute_url": "https://job-boards.greenhouse.io/mocktrading/jobs/1001",
+      "departments": [{ "name": "Compliance" }], "offices": [{ "name": "Chicago", "location": "Chicago, IL" }],
+      "content": "&lt;p&gt;Monitor futures and options activity for &lt;strong&gt;spoofing&lt;/strong&gt;, layering and wash trading. Escalate to the CFTC and NFA as required. Experience with CME rules and FINRA a plus.&lt;/p&gt;"
+    },
+    {
+      "id": 1002, "title": "Compliance Officer, Broker-Dealer", "updated_at": "2026-11-05T09:00:00-05:00",
+      "location": { "name": "New York, NY; Chicago, IL" }, "absolute_url": "https://job-boards.greenhouse.io/mocktrading/jobs/1002",
+      "departments": [{ "name": "Legal & Compliance" }], "offices": [],
+      "content": "&lt;p&gt;Own SEC and FINRA regulatory reporting and compliance testing for our broker dealer.&lt;/p&gt;"
+    },
+    {
+      "id": 1003, "title": "Market Surveillance Associate", "updated_at": "2026-11-01T09:00:00-05:00",
+      "location": { "name": "London" }, "absolute_url": "https://job-boards.greenhouse.io/mocktrading/jobs/1003",
+      "departments": [], "offices": [{ "name": "London", "location": "London, UK" }],
+      "content": "&lt;p&gt;Market abuse monitoring under MAR.&lt;/p&gt;"
+    },
+    {
+      "id": 1004, "title": "Software Engineer", "updated_at": "2026-11-03T09:00:00-05:00",
+      "location": { "name": "Chicago, IL" }, "absolute_url": "https://job-boards.greenhouse.io/mocktrading/jobs/1004",
+      "departments": [{ "name": "Engineering" }], "offices": [],
+      "content": "&lt;p&gt;Build low-latency systems. Respond within a second. Strong security background.&lt;/p&gt;"
+    },
+    {
+      "id": 1005, "title": "Trade Support Specialist", "updated_at": "2026-10-20T09:00:00-05:00",
+      "location": { "name": "Remote" }, "absolute_url": "https://job-boards.greenhouse.io/mocktrading/jobs/1005",
+      "departments": [{ "name": "Operations" }], "offices": [{ "name": "Chicago HQ", "location": "Chicago, Illinois" }],
+      "content": "&lt;p&gt;Support our electronic trading desks and trading operations.&lt;/p&gt;"
+    }
+  ]
+}

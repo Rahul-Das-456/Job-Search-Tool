@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chicago Compliance Jobs</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232563eb'/><circle cx='14' cy='14' r='7' fill='none' stroke='white' stroke-width='3'/><path d='M19 19l6 6' stroke='white' stroke-width='3' stroke-linecap='round'/></svg>" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-inner">
+      <div>
+        <h1>Chicago Compliance &amp; Surveillance Jobs</h1>
+        <p class="sub">Greenhouse + Ashby boards · Chicago only · <span id="scanned">not scanned yet</span></p>
+      </div>
+      <div class="actions">
+        <button id="scanBtn" class="btn primary">Scan now</button>
+        <button id="discoverBtn" class="btn" hidden title="Run the site: queries through your search API to find new company boards, then scan">Discover + scan</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="stats" id="stats"></section>
+
+    <section class="filters">
+      <input id="q" type="search" placeholder="Filter by title, company, keyword…" autocomplete="off" />
+      <select id="source" aria-label="Source">
+        <option value="">All sources</option>
+        <option value="greenhouse">Greenhouse</option>
+        <option value="ashby">Ashby</option>
+      </select>
+      <select id="sort" aria-label="Sort">
+        <option value="score">Best match</option>
+        <option value="newest">Newest</option>
+        <option value="company">Company A–Z</option>
+      </select>
+      <label class="check"><input type="checkbox" id="titleOnly" /> Keyword in title</label>
+      <label class="check"><input type="checkbox" id="newOnly" /> New only</label>
+      <button id="markSeen" class="btn small">Mark all seen</button>
+      <button id="exportCsv" class="btn small">Export CSV</button>
+    </section>
+    <section class="chips" id="chips" aria-label="Topic filters"></section>
+
+    <div class="layout">
+      <section id="results" class="results" aria-live="polite"><p class="empty">Loading…</p></section>
+
+      <aside class="side">
+        <details open>
+          <summary>Board status <span id="boardSummary" class="muted"></span></summary>
+          <div id="boards" class="boards"></div>
+        </details>
+
+        <details>
+          <summary>Add a company board</summary>
+          <form id="addBoard" class="add">
+            <select name="source">
+              <option value="greenhouse">Greenhouse</option>
+              <option value="ashby">Ashby</option>
+            </select>
+            <input name="token" placeholder="board token, e.g. drw" required />
+            <input name="company" placeholder="Company name (optional)" />
+            <button class="btn small primary">Add &amp; scan</button>
+            <p class="hint">Token = slug in <code>job-boards.greenhouse.io/<b>token</b></code> or <code>jobs.ashbyhq.com/<b>token</b></code>. You can also paste a full job URL.</p>
+          </form>
+        </details>
+
+        <details>
+          <summary>Search queries</summary>
+          <p class="hint" id="discoveryHint"></p>
+          <ol id="queries" class="queries"></ol>
+        </details>
+      </aside>
+    </div>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
