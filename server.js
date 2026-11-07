@@ -10,7 +10,9 @@ const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '127.0.0.1';
 const REFRESH_MINUTES = Number(process.env.REFRESH_MINUTES || 60);
 const DISCOVER_HOURS = Number(process.env.DISCOVER_HOURS || 24);
-const PUBLIC = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
+const ROOT = path.dirname(fileURLToPath(import.meta.url));
+const PUBLIC = path.join(ROOT, 'public');
+const BROWSER_MODULES = ['matcher.js', 'queries.js', 'http.js', 'sources/greenhouse.js', 'sources/ashby.js'];
 
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
 
@@ -66,10 +68,12 @@ const server = http.createServer(async (req, res) => {
     }
     if (url.pathname.startsWith('/api/')) return send(res, 404, { error: 'not found' });
 
-    // Static files
+    // Static files (plus the browser-safe modules under /src/)
     const rel = url.pathname === '/' ? 'index.html' : decodeURIComponent(url.pathname).replace(/^\/+/, '');
-    const file = path.normalize(path.join(PUBLIC, rel));
-    if (!file.startsWith(PUBLIC + path.sep)) return send(res, 403, 'forbidden', 'text/plain');
+    const fromSrc = rel.startsWith('src/') && BROWSER_MODULES.includes(rel.slice(4));
+    const base = fromSrc ? ROOT : PUBLIC;
+    const file = path.normalize(path.join(base, rel));
+    if (!file.startsWith(base + path.sep)) return send(res, 403, 'forbidden', 'text/plain');
     const buf = await fs.readFile(file).catch(() => null);
     if (!buf) return send(res, 404, 'not found', 'text/plain');
     return send(res, 200, buf, TYPES[path.extname(file)] || 'application/octet-stream');

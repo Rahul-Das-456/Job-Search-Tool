@@ -55,3 +55,16 @@ test('every Greenhouse query has an Ashby counterpart', () => {
   assert.equal(GREENHOUSE_QUERIES.length, 15);
   assert.ok(ASHBY_QUERIES.every((q) => q.startsWith('site:jobs.ashbyhq.com ') && q.includes('"Chicago"')));
 });
+
+test('regulator acronyms alone are not a strong match', () => {
+  assert.equal(matchJob({ title: 'Content Designer', description: 'Member FINRA/SIPC. SEC registered.' }).strong, false);
+  assert.equal(matchJob({ title: 'Surveillance Analyst', description: '' }).strong, true);
+  assert.equal(matchJob({ title: 'Analyst', description: 'trade surveillance for spoofing and layering' }).strong, true);
+});
+
+test('dedupe drops the same posting from two boards', async () => {
+  const { dedupe } = await import('../src/matcher.js');
+  const out = dedupe([{ company: 'A', title: 'X  Y', score: 1 }, { company: 'a', title: 'x y', score: 3 }, { company: 'A', title: 'Z', score: 1 }]);
+  assert.equal(out.length, 2);
+  assert.equal(out.find((j) => j.title.toLowerCase().startsWith('x')).score, 3);
+});

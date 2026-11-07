@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { fetchGreenhouse, normalizeGreenhouse } from './sources/greenhouse.js';
 import { fetchAshby, normalizeAshby } from './sources/ashby.js';
 import { discoverBoards, discoveryProvider } from './sources/discovery.js';
-import { isChicago, matchJob, snippet } from './matcher.js';
+import { isChicago, selectJobs, dedupe } from './matcher.js';
 import { mapLimit } from './http.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -75,22 +75,7 @@ async function fetchBoard(board) {
   return board.source === 'greenhouse' ? fetchGreenhouse(board) : fetchAshby(board);
 }
 
-/** Filter + score raw jobs: Chicago only, at least one topic hit. */
-export function selectJobs(jobs, { minScore = 1 } = {}) {
-  const out = [];
-  for (const j of jobs) {
-    if (!isChicago(j.locations)) continue;
-    const m = matchJob(j);
-    if (m.score < minScore) continue;
-    const { description, ...rest } = j;
-    // Show the Chicago location first when it is only a secondary location.
-    const location = isChicago([j.location])
-      ? j.location
-      : [j.locations.find((l) => isChicago([l])), j.location].filter(Boolean).join(' · also ');
-    out.push({ ...rest, location, ...m, snippet: snippet(description, m.terms) });
-  }
-  return out;
-}
+export { selectJobs };
 
 const state = {
   running: null,
@@ -140,6 +125,7 @@ export function scan({ discover = false } = {}) {
     });
 
     await writeJson(FIRST_SEEN_FILE, firstSeen).catch(() => {});
+    jobs.splice(0, jobs.length, ...dedupe(jobs));
     jobs.sort((a, b) => b.score - a.score || String(b.updatedAt).localeCompare(String(a.updatedAt)));
     statuses.sort((a, b) => Number(a.ok) - Number(b.ok) || (b.matched || 0) - (a.matched || 0) || a.company.localeCompare(b.company));
 

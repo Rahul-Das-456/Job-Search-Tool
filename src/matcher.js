@@ -42,9 +42,12 @@ export function matchJob({ title = '', description = '' }) {
   const terms = new Set();
   let score = 0;
   let titleHit = false;
+  let topicScore = 0; // description score excluding regulator acronyms
+  let topicCats = 0;
 
   for (const cat of COMPILED) {
     let hit = false;
+    const boilerplate = cat.id === 'regulators';
     for (const { term, re } of cat.regexes) {
       const inTitle = (title.match(re) || []).length;
       const inDesc = Math.min((description.match(re) || []).length, 5);
@@ -53,13 +56,48 @@ export function matchJob({ title = '', description = '' }) {
         terms.add(term);
         score += inTitle * 5 + inDesc;
         if (inTitle) titleHit = true;
+        if (!boilerplate) topicScore += inDesc;
       }
     }
-    if (hit) categories.push(cat.id);
+    if (hit) {
+      categories.push(cat.id);
+      if (!boilerplate) topicCats++;
+    }
   }
   // Bonus for breadth: a role touching several topics is more likely on-target.
   score += Math.max(0, categories.length - 1) * 2;
-  return { score, categories, terms: [...terms], titleHit };
+  // "Strong" = clearly about these topics. Regulator names alone (SEC, FINRA…)
+  // are common in legal boilerplate, so they never qualify a job on their own.
+  const strong = titleHit || topicCats >= 2 || topicScore >= 3;
+  return { score, categories, terms: [...terms], titleHit, strong };
+}
+
+/** Filter + score normalized jobs: Chicago only, at least one topic hit. */
+export function selectJobs(jobs, { minScore = 1 } = {}) {
+  const out = [];
+  for (const j of jobs) {
+    if (!isChicago(j.locations)) continue;
+    const m = matchJob(j);
+    if (m.score < minScore) continue;
+    const { description, ...rest } = j;
+    // Show the Chicago location first when it is only a secondary location.
+    const location = isChicago([j.location])
+      ? j.location
+      : [j.locations.find((l) => isChicago([l])), j.location].filter(Boolean).join(' · also ');
+    out.push({ ...rest, location, ...m, snippet: snippet(description, m.terms) });
+  }
+  return out;
+}
+
+/** Drop the same posting listed on two boards (same company + title). Keeps the best-scored one. */
+export function dedupe(jobs) {
+  const best = new Map();
+  for (const j of jobs) {
+    const k = `${j.company}|${j.title}`.toLowerCase().replace(/\s+/g, ' ').trim();
+    const cur = best.get(k);
+    if (!cur || j.score > cur.score) best.set(k, j);
+  }
+  return [...best.values()];
 }
 
 /** Short snippet of the description around the first matched term. */

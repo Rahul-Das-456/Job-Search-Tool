@@ -11,7 +11,7 @@ const state = {
   data: null,
   seen: new Set(store.get('seenIds', [])),
   activeCats: new Set(store.get('activeCats', [])),
-  filters: { q: '', source: '', sort: 'score', titleOnly: false, newOnly: false, company: '', days: '', ...store.get('filters', {}) },
+  filters: { q: '', source: '', sort: 'score', titleOnly: false, newOnly: false, company: '', days: '', relevance: 'strong', ...store.get('filters', {}) },
   static: false,
 };
 
@@ -38,11 +38,12 @@ function highlight(text, terms) {
 }
 
 function filtered() {
-  const { q, source, sort, titleOnly, newOnly, company, days } = state.filters;
+  const { q, source, sort, titleOnly, newOnly, company, days, relevance } = state.filters;
   const cutoff = days ? Date.now() - Number(days) * 86400e3 : 0;
   const needle = q.trim().toLowerCase();
   let jobs = state.data?.jobs || [];
   jobs = jobs.filter((j) => {
+    if (relevance === 'strong' && j.strong === false) return false;
     if (source && j.source !== source) return false;
     if (company && j.company !== company) return false;
     if (cutoff && new Date(j.publishedAt || j.updatedAt || j.firstSeen).getTime() < cutoff) return false;
@@ -65,12 +66,12 @@ function filtered() {
 
 function renderStats() {
   const d = state.data;
-  const jobs = d?.jobs || [];
+  const jobs = (d?.jobs || []).filter((j) => state.filters.relevance !== 'strong' || j.strong !== false);
   const fresh = jobs.filter((j) => !state.seen.has(j.id)).length;
   const ok = (d?.boards || []).filter((b) => b.ok).length;
   const companies = new Set(jobs.map((j) => j.company)).size;
   $('#stats').innerHTML = [
-    [jobs.length, 'matching Chicago roles'],
+    [jobs.length, state.filters.relevance === 'strong' ? 'strong Chicago matches' : 'Chicago roles mentioning a topic'],
     [fresh, 'new since you last looked'],
     [companies, 'companies hiring'],
     [`${ok}/${d?.boards?.length || 0}`, 'boards scanned OK'],
@@ -88,7 +89,7 @@ function renderCompanies() {
 
 function renderChips() {
   const counts = {};
-  for (const j of state.data?.jobs || []) for (const c of j.categories) counts[c] = (counts[c] || 0) + 1;
+  for (const j of state.data?.jobs || []) if (state.filters.relevance !== 'strong' || j.strong !== false) for (const c of j.categories) counts[c] = (counts[c] || 0) + 1;
   $('#chips').innerHTML = state.config.categories.map((c) =>
     `<button class="chip" data-cat="${c.id}" aria-pressed="${state.activeCats.has(c.id)}" title="${esc(c.terms.join(', '))}">${esc(c.label)}<span class="n">${counts[c.id] || 0}</span></button>`
   ).join('');
@@ -153,13 +154,53 @@ async function load(url = state.static ? 'jobs.json' : 'api/jobs', opts) {
   render();
 }
 
+// Static site: re-fetch every board straight from Greenhouse/Ashby in the
+// browser (both APIs allow cross-origin GETs) and re-run the matching.
+async function liveRefresh() {
+  const [gh, ab, m] = await Promise.all([
+    import('./src/sources/greenhouse.js'), import('./src/sources/ashby.js'), import('./src/matcher.js'),
+  ]);
+  const prev = new Map((state.data?.jobs || []).map((j) => [j.id, j.firstSeen]));
+  const boards = (state.data?.boards || []).filter((b) => b.ok);
+  const now = new Date().toISOString();
+  const jobs = [];
+  const statuses = [];
+  let i = 0;
+  await Promise.all(Array.from({ length: 8 }, async () => {
+    while (i < boards.length) {
+      const b = boards[i++];
+      const t0 = Date.now();
+      try {
+        const isGh = b.source === 'greenhouse';
+        const res = await fetch(isGh ? gh.greenhouseUrl(b.token) : ab.ashbyUrl(b.token));
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const raw = isGh ? gh.normalizeGreenhouse(b.token, b.company, await res.json()) : ab.normalizeAshby(b.token, b.company, await res.json());
+        const picked = m.selectJobs(raw).map((j) => ({ ...j, firstSeen: prev.get(j.id) || now, origin: b.origin }));
+        jobs.push(...picked);
+        statuses.push({ ...b, ok: true, total: raw.length, chicago: raw.filter((j) => m.isChicago(j.locations)).length, matched: picked.length, ms: Date.now() - t0 });
+      } catch (e) {
+        statuses.push({ ...b, ok: false, error: e.message, ms: Date.now() - t0 });
+      }
+      $('#scanBtn').textContent = `Refreshing… ${statuses.length}/${boards.length}`;
+    }
+  }));
+  if (!statuses.some((s) => s.ok)) throw new Error('could not reach any job board');
+  const unique = m.dedupe(jobs).sort((a, b) => b.score - a.score);
+  statuses.sort((a, b) => Number(a.ok) - Number(b.ok) || (b.matched || 0) - (a.matched || 0) || a.company.localeCompare(b.company));
+  const failed = (state.data?.boards || []).filter((b) => !b.ok);
+  state.data = { ...state.data, jobs: unique, boards: [...statuses, ...failed], scannedAt: now, live: true };
+  render();
+}
+
 async function runScan(discover = false) {
   const btns = [$('#scanBtn'), $('#discoverBtn')];
   btns.forEach((b) => (b.disabled = true));
   $('#scanBtn').textContent = 'Scanning…';
-  try { await load(`api/scan${discover ? '?discover=1' : ''}`, { method: 'POST' }); }
-  catch (e) { alert(`Scan failed: ${e.message}`); }
-  finally { btns.forEach((b) => (b.disabled = false)); $('#scanBtn').textContent = 'Scan now'; }
+  try {
+    if (state.static) await liveRefresh();
+    else await load(`api/scan${discover ? '?discover=1' : ''}`, { method: 'POST' });
+  } catch (e) { alert(`Scan failed: ${e.message}`); }
+  finally { btns.forEach((b) => (b.disabled = false)); $('#scanBtn').textContent = state.static ? 'Refresh live' : 'Scan now'; }
 }
 
 function exportCsv() {
@@ -192,6 +233,8 @@ function bind() {
   $('#sort').addEventListener('change', (e) => { f.sort = e.target.value; save(); });
   $('#titleOnly').addEventListener('change', (e) => { f.titleOnly = e.target.checked; save(); });
   $('#newOnly').addEventListener('change', (e) => { f.newOnly = e.target.checked; save(); });
+  $('#relevance').value = f.relevance;
+  $('#relevance').addEventListener('change', (e) => { f.relevance = e.target.value; store.set('filters', f); render(); });
   $('#days').value = f.days;
   $('#days').addEventListener('change', (e) => { f.days = e.target.value; save(); });
   $('#company').addEventListener('change', (e) => { f.company = e.target.value; save(); });
@@ -237,20 +280,29 @@ function bind() {
 
 async function init() {
   // Server mode (npm start) has an API; the hosted static site ships config.json + jobs.json.
-  const api = await fetch('api/config').catch(() => null);
+  const isStatic = document.querySelector('meta[name="site-mode"]')?.content === 'static';
+  const api = isStatic ? null : await fetch('api/config').catch(() => null);
   if (api?.ok && api.headers.get('content-type')?.includes('json')) {
     state.config = await api.json();
   } else {
     state.static = true;
     state.config = await (await fetch('config.json', { cache: 'no-cache' })).json();
     for (const el of document.querySelectorAll('.server-only')) el.hidden = true;
+    $('#scanBtn').textContent = 'Refresh live';
+    $('#scanBtn').title = 'Fetch the latest postings directly from every board now';
     for (const el of document.querySelectorAll('.static-only')) el.hidden = false;
   }
   renderQueries();
   bind();
   await load().catch((e) => { $('#results').innerHTML = `<p class="empty">Failed to load: ${esc(e.message)}</p>`; });
-  // Pick up the server's background refreshes.
-  setInterval(() => load().catch(() => {}), 5 * 60e3);
+  if (state.static) {
+    // If the scheduled build is stale (e.g. delayed), refresh straight from the boards.
+    const age = Date.now() - new Date(state.data?.scannedAt || 0).getTime();
+    if (age > 6 * 3600e3 && !state.data?.mock) runScan(false);
+  } else {
+    // Pick up the server's background refreshes.
+    setInterval(() => load().catch(() => {}), 5 * 60e3);
+  }
   setInterval(renderStats, 60e3);
 }
 init();

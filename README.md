@@ -12,7 +12,23 @@ A small web app that searches **Greenhouse** and **Ashby** job boards for **Chic
 4. **Discovery (optional).** If a search API key is set, the 15 original `site:` queries, plus the same queries against `site:jobs.ashbyhq.com`, run automatically once a day. Any new company boards in the results are added to the scan. Without a key, each query in the UI's "Search queries" panel links to Google so you can run it by hand.
 5. **Auto-refresh.** The server rescans every 60 minutes, and the page picks up the new results. Jobs you haven't opened are marked **New**.
 
-## Run it
+## Hosted website (GitHub Pages)
+
+`.github/workflows/site.yml` scans every board every 3 hours. It then publishes the site to `https://<user>.github.io/<repo>/` with `jobs.json` and an RSS feed (`feed.xml`). On the site:
+
+- **Refresh live** fetches the newest postings straight from Greenhouse and Ashby in your browser. Both APIs allow cross-origin requests, so no server is needed. The page also does this automatically if the scheduled data is more than 6 hours old.
+- All filters, New/seen tracking and CSV export work as they do locally.
+
+One-time setup:
+1. Merge this branch into `main`. The schedule only runs from the default branch.
+2. **Settings → Pages → Build and deployment → Source: GitHub Actions.**
+3. GitHub Pages on a **private** repo needs a paid GitHub plan. On a free account, make the repo public (Settings → General → Danger Zone).
+4. Optional: add a `SERPAPI_KEY` (or `BRAVE_SEARCH_API_KEY`) repository secret so the `site:` queries run automatically and find new company boards.
+5. Run it now: **Actions → Build & publish job site → Run workflow**.
+
+Every run's job summary lists each board's status and the matched jobs.
+
+## Run it locally
 
 Requires Node 18+ and has no dependencies.
 
@@ -36,9 +52,11 @@ npm test
 ## Adding companies
 
 - **UI:** use "Add a company board" in the sidebar. Enter a token, or paste any job URL such as `https://job-boards.greenhouse.io/drw/jobs/123`.
-- **Config:** edit `config/boards.json`. The token is the slug in `job-boards.greenhouse.io/<token>` or `jobs.ashbyhq.com/<token>`.
+- **Config:** edit `config/boards.json`. The token is the slug in `job-boards.greenhouse.io/<token>` or `jobs.ashbyhq.com/<token>`. Check candidate tokens with `node scripts/probe.js peak6 drweng …`.
 
-The **Board status** panel shows, for each board, how many jobs it has in total, in Chicago and matching your topics. Boards with a wrong token show "404". The seed list is a starting point of Chicago trading firms, exchanges and fintechs. Some of those tokens may be wrong or the companies may have moved to another ATS, so prune them as needed.
+The **Board status** panel shows, for each board, how many jobs it has in total, in Chicago and matching your topics. All 30 seed boards were verified on 2026-11-07. Several Chicago firms (PEAK6, Belvedere, Old Mission, XR, Wolverine, Group One, Cboe, CME) don't use Greenhouse or Ashby, so they can't be scanned here.
+
+**Relevance:** "Strong matches" (the default) needs a keyword in the title, two different topic groups, or repeated topic phrases. Regulator names alone (SEC, FINRA…) show up in legal boilerplate, so they never qualify a job on their own. Switch to "All mentions" to see everything.
 
 ## Features
 
@@ -59,6 +77,8 @@ src/scanner.js            board list, scanning, first-seen tracking
 src/sources/greenhouse.js Greenhouse API client
 src/sources/ashby.js      Ashby API client
 src/sources/discovery.js  search-API discovery of new boards
+scripts/build.js          static site build (used by the workflow)
+scripts/probe.js          check whether board tokens exist
 public/                   web UI (plain HTML/CSS/JS)
 config/boards.json        seed boards
 data/                     runtime state (git-ignored)

@@ -16,7 +16,7 @@
       </div>
       <div class="actions">
         <a class="btn static-only" hidden href="feed.xml" title="RSS feed of new matches">RSS</a>
-        <button id="scanBtn" class="btn primary server-only">Scan now</button>
+        <button id="scanBtn" class="btn primary">Scan now</button>
         <button id="discoverBtn" class="btn server-only" hidden title="Run the site: queries through your search API to find new company boards, then scan">Discover + scan</button>
       </div>
     </div>
@@ -27,6 +27,10 @@
 
     <section class="filters">
       <input id="q" type="search" placeholder="Filter by title, company, keyword…" autocomplete="off" />
+      <select id="relevance" aria-label="Relevance">
+        <option value="strong">Strong matches</option>
+        <option value="all">All mentions</option>
+      </select>
       <select id="source" aria-label="Source">
         <option value="">All sources</option>
         <option value="greenhouse">Greenhouse</option>

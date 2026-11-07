@@ -13,6 +13,8 @@ const DIST = path.join(ROOT, 'dist');
 const REFRESH_HOURS = Number(process.env.REFRESH_HOURS || 3);
 const SITE_URL = (process.env.SITE_URL || '').replace(/\/$/, '');
 
+export const BROWSER_MODULES = ['matcher.js', 'queries.js', 'http.js', 'sources/greenhouse.js', 'sources/ashby.js'];
+
 const xml = (s = '') => String(s).replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]));
 
 function rss(jobs) {
@@ -42,6 +44,11 @@ async function main() {
 
   await fs.rm(DIST, { recursive: true, force: true });
   await fs.cp(path.join(ROOT, 'public'), DIST, { recursive: true });
+  const indexPath = path.join(DIST, 'index.html');
+  const html = await fs.readFile(indexPath, 'utf8');
+  await fs.writeFile(indexPath, html.replace('<head>', '<head>\n  <meta name="site-mode" content="static" />'));
+  // Browser-safe modules used by the page's "Refresh live" button.
+  for (const f of BROWSER_MODULES) await fs.cp(path.join(ROOT, 'src', f), path.join(DIST, 'src', f), { recursive: true });
   await fs.writeFile(path.join(DIST, 'jobs.json'), JSON.stringify({ ...result, static: true, refreshHours: REFRESH_HOURS }));
   await fs.writeFile(path.join(DIST, 'config.json'), JSON.stringify({
     categories: CATEGORIES.map(({ id, label, terms }) => ({ id, label, terms })),
